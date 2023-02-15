@@ -1,56 +1,67 @@
 package pack;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
-import java.nio.file.Path;
+import java.io.*;
+import java.nio.charset.Charset;
+import java.time.LocalDate;
 import java.util.Scanner;
 
-import static java.nio.file.StandardOpenOption.*;
-
 public class Main {
+
+
     public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        String text = "";
 
-//        while (!text.equalsIgnoreCase("/w")) {
-//            System.out.print("Enter text: ");
-//            text = sc.nextLine();
-//        }
+        String fileName = "notes.txt";
+        Charset fileCharset = Charset.defaultCharset();
+        System.out.println("Введите кодировку файла (например, UTF-8): ");
+        Scanner scanner = new Scanner(System.in);
+        String charsetName = scanner.nextLine();
+        fileCharset = Charset.forName(charsetName);
 
-            System.out.print("Enter zagolovok: ");
-              String zagolovok = sc.nextLine();
-              zagolovok=zagolovok.toUpperCase();
+        boolean exit = false;
+        while (!exit) {
+            System.out.println("Введите команду (выбрать файл - /f, записаить заметку - /w, прочитать все заметки - /r, выход - /exit): ");
+            String command = scanner.nextLine();
+            switch (command) {
+                case "/f" -> {
+                    System.out.print("Введите путь к файлу: "); // не совсем удобно
+                    fileName = scanner.nextLine();
+                }
+                case "/w" -> {
+                    try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName, true), fileCharset))) {
+                        System.out.println("Введите заголовок: ");
+                        String title = new Scanner(System.in).nextLine();
+                        System.out.println("Введите текст заметки: ");
+                        String text = new Scanner(System.in).nextLine();
 
-//             System.out.print("Enter text zametki: ");
-//              String zametka = sc.nextLine();
-
-        Path path = Path.of("C:\\Users\\artem\\OneDrive\\Документы\\", "fignia.txt");
-
-        ByteBuffer buffer = ByteBuffer.wrap(zagolovok.getBytes());
-//        ByteBuffer buffer1 = ByteBuffer.wrap(zametka.getBytes());
-
-        try (FileChannel open = FileChannel.open(path, CREATE, WRITE, APPEND)) {
-            FileLock lock = open.tryLock();
-            open.write(buffer.flip());
-            buffer.clear();
-//            open.write(buffer1.flip());
-//            buffer1.clear();
-
-
-            open.read(buffer);
-            zagolovok=new String(buffer.array());
-//            open.read(buffer1);
-//            zametka=new String(buffer1.array());
-//
-            System.out.println(zagolovok);
-//            System.out.println(zametka);
-            lock.release();
-        } catch (IOException e) {
-            e.printStackTrace();
+                        writer.write(LocalDate.now().toString()+"\n");
+                        writer.write(title.toUpperCase() + "\n");
+                        writer.write(text + "\n\n");
+                        System.out.println("Запись успешна");
+                    } catch (IOException e) {
+                        System.err.println("Ошибка записи " + e.getMessage());
+                    }
+                }
+                case "/r" -> {
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName), fileCharset))) {
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            if (line.equals("-----")) {
+                                String title = reader.readLine();
+                                String text = reader.readLine();
+                                reader.readLine();
+                                System.out.println(title);
+                                System.out.println(text);
+                            }
+                        }
+                    } catch (FileNotFoundException e) {
+                        System.err.println("Файл не знайдено. Введіть інший файл.");
+                    } catch (IOException e) {
+                        System.err.println("Помилка читання файлу: " + e.getMessage());
+                    }
+                }
+                case "/exit" -> exit = true;
+                default -> System.out.println("Невідома команда.");
+            }
         }
-
-
     }
 }
